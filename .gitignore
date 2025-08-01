@@ -1,0 +1,39 @@
+# 👉 Python bytecode and cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# 👉 Virtual environments
+.env/
+.venv/
+env/
+venv/
+ENV/
+
+# 👉 Package builds and metadata
+build/
+dist/
+*.egg-info/
+
+# 👉 Logs and temp files
+*.log
+*.tmp
+*.bak
+
+# 👉 Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# 👉 OS system files
+.DS_Store
+Thumbs.db
+
+# 👉 IDE/editor folders
+.vscode/
+.idea/
+
+# 👉 Streamlit
+.streamlit/config.toml
+.streamlit/secrets.toml
+.streamlit/cache/
+.streamlit/state/
