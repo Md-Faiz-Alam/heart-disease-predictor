@@ -54,7 +54,7 @@ jobs:
         run: pytest -m "not slow" --cov --cov-report=term-missing --cov-report=xml
       - name: Slow tests (end-to-end training)
         run: pytest -m slow
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: coverage.xml
@@ -77,7 +77,7 @@ jobs:
       # Fast retrain from scratch; exits non-zero if CV ROC-AUC is below the gate.
       - run: python -m heart.train --trials 5 --no-track
       - run: pytest tests/test_model_quality.py -m "not slow"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: training-run
           path: |
