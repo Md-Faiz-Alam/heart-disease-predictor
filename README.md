@@ -101,7 +101,7 @@ Every prediction is explained per patient with SHAP, in percentage points of ris
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Training["Training · python -m heart.train"]
         RAW[("UCI Cleveland<br/>303 patients")] --> VAL["Load + validate"]
         VAL --> SPLIT{"Stratified split"}
