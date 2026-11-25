@@ -1,0 +1,14 @@
+# Store text files with LF endings in the repo and check them out with LF everywhere,
+# so Docker builds, CI and lockfiles behave the same on Windows, macOS and Linux.
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+
+# Binary artifacts: never touch.
+*.png binary
+*.jpg binary
+*.pdf binary
+*.joblib binary
+*.pkl binary

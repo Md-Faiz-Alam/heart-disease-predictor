@@ -28,7 +28,7 @@ First production-ready release.
 - Prediction audit log and PSI-based data-drift report (`python -m heart.monitoring`).
 - Single Docker image that runs the API or the UI (`SERVICE`, `PORT`), plus docker compose.
 - CI: lint, type-check, tests with coverage, retrain behind the quality gate, and an image smoke test.
-  Weekly drift workflow and Dependabot.
+  Weekly drift workflow.
 - Pinned dependency lockfiles (uv), pre-commit hooks and MIT license.
 
 ### Fixed
