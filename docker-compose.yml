@@ -1,0 +1,45 @@
+# docker compose up --build              -> API on :8000, UI on :8501
+# docker compose --profile tracking up   -> also MLflow UI on :5000 (reads ./mlruns)
+# Ports busy? API_PORT=8001 UI_PORT=8502 docker compose up
+
+x-app: &app
+  build: .
+  image: heart-disease:latest
+  restart: unless-stopped
+  volumes:
+    - prediction-logs:/app/logs
+
+services:
+  api:
+    <<: *app
+    environment:
+      SERVICE: api
+      HEART_LOG_LEVEL: INFO
+      # HEART_API_KEY: change-me   # uncomment to require an X-API-Key header
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+  ui:
+    <<: *app
+    environment:
+      SERVICE: ui
+    ports:
+      - "${UI_PORT:-8501}:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  mlflow:
+    profiles: ["tracking"]
+    image: ghcr.io/mlflow/mlflow:v3.18.0 # keep in sync with mlflow in requirements-dev.lock
+    command: >
+      mlflow server --host 0.0.0.0 --port 5000
+      --backend-store-uri sqlite:////mlruns/mlflow.db
+      --default-artifact-root /mlruns/artifacts
+    ports:
+      - "${MLFLOW_PORT:-5000}:5000"
+    volumes:
+      - ./mlruns:/mlruns
+
+volumes:
+  prediction-logs:

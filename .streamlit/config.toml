@@ -1,0 +1,9 @@
+[browser]
+gatherUsageStats = false
+
+[server]
+headless = true
+maxUploadSize = 5 # MB, enough for batch CSVs
+
+[theme]
+primaryColor = "#C62828"

@@ -33,7 +33,17 @@ Thumbs.db
 .idea/
 
 # 👉 Streamlit
-.streamlit/config.toml
+
 .streamlit/secrets.toml
 .streamlit/cache/
 .streamlit/state/
+# 👉 Tooling caches
+.pytest_cache/
+.ruff_cache/
+mlruns/
+logs/
+.env
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/

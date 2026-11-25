@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.13"
+  MPLBACKEND: Agg
+
+jobs:
+  lint:
+    name: Lint & type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-dev.lock
+      - name: Install
+        run: |
+          pip install -r requirements-dev.lock
+          pip install --no-deps -e .
+      - run: ruff check src tests app.py
+      - run: ruff format --check src tests app.py
+      - run: mypy
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-dev.lock
+      - name: Install
+        run: |
+          pip install -r requirements-dev.lock
+          pip install --no-deps -e .
+      - name: Unit, API, UI and model-quality tests
+        run: pytest -m "not slow" --cov --cov-report=term-missing --cov-report=xml
+      - name: Slow tests (end-to-end training)
+        run: pytest -m slow
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+
+  train:
+    name: Retrain smoke test + quality gate
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-dev.lock
+      - name: Install
+        run: |
+          pip install -r requirements-dev.lock
+          pip install --no-deps -e .
+      # Fast retrain from scratch; exits non-zero if CV ROC-AUC is below the gate.
+      - run: python -m heart.train --trials 5 --no-track
+      - run: pytest tests/test_model_quality.py -m "not slow"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: training-run
+          path: |
+            models/metadata.json
+            models/MODEL_CARD.md
+            reports/*.png
+
+  docker:
+    name: Build & smoke-test image
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          tags: heart-disease:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Start API and UI (same image, PORT injected like Render does)
+        run: |
+          docker run -d --name api -e SERVICE=api -e PORT=10000 -p 8000:10000 heart-disease:ci
+          docker run -d --name ui  -e SERVICE=ui  -e PORT=10000 -p 8501:10000 heart-disease:ci
+      - name: Smoke-test API
+        run: |
+          for i in $(seq 1 30); do curl -fs localhost:8000/health && break; sleep 2; done
+          curl -fs -X POST localhost:8000/predict -H 'Content-Type: application/json'             -d '{"age":67,"sex":1,"cp":4,"trestbps":160,"chol":286,"fbs":0,"restecg":2,"thalach":108,"exang":1,"oldpeak":1.5,"slope":2,"ca":3,"thal":3}'
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST localhost:8000/predict -H 'Content-Type: application/json' -d '{"age":67}')" = "422"
+      - name: Smoke-test UI
+        run: for i in $(seq 1 30); do curl -fs localhost:8501/_stcore/health && exit 0; sleep 2; done; exit 1
+      - name: Container logs
+        if: always()
+        run: |
+          docker logs api || true
+          docker logs ui || true

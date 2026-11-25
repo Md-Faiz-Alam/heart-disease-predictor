@@ -1,0 +1,33 @@
+# Example scheduled drift check. In production the prediction log would be pulled from
+# the API's storage (S3, a database, ...); here it runs against a log committed or
+# downloaded to logs/predictions.jsonl, and is skipped when there is none.
+name: Drift check
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements.lock
+      - run: |
+          pip install -r requirements.lock
+          pip install --no-deps -e .
+      - run: python -m heart.monitoring --output reports/drift.json --fail-on-drift
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: drift-report
+          path: reports/drift.json
+          if-no-files-found: ignore
